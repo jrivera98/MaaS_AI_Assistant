@@ -16,10 +16,13 @@ class LocalChatbot:
         })
 
         # Build context from history
-        context = "\n".join([
+        context = (
+                    "You are an intelligent assistant for a Mobility-as-a-Service system."
+                   "Help users with routing, congestion insights, determine feed demand, transit coordination,"
+                    "station demand explanations, and operational recommendations."+"\n".join([
         f"{msg['role']}: {msg['content']}"
         for msg in self.conversation_history[-5:] # Last 5 messages
-        ])
+        ]))
         
         try:
             # Call local model
@@ -42,7 +45,9 @@ class LocalChatbot:
         self.conversation_history.append({
         "role": "assistant",
         "content": answer,
-        "system"
+        "system message":"You are an intelligent assistant for a Mobility-as-a-Service system. "
+                            + "Help users with routing, congestion insights, determine feed demand, transit coordination, "
+                            +"station demand explanations, and operational recommendations."
         })
 
         return answer
