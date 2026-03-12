@@ -1,0 +1,174 @@
+# Creating GAT Journey Planner Agent Model
+
+### Read in training data -> NetworkX graph
+
+import pandas as pd
+import networkx as nx
+
+df = pd.read_csv("C:\\Users\\sasab\\Documents\\Projects\\MaaS_AI\\Agents\\journey_planner\\data\\pune_maas_journey_planner_data.csv")
+
+#encode 'string' value attributes (line,mode)
+#for every new value map to unique 
+line_map = {name: i for i, name in enumerate(df["line"].unique())}
+mode_map = {name: i for i, name in enumerate(df["mode"].unique(), start=1)}
+
+df["line_id"] = df["line"].map(line_map)
+df["mode_id"] = df["mode"].map(mode_map)
+df["is_transfer"] = df["is_transfer"].astype(int)
+df["bidirectional"] = df["bidirectional"].astype(int)
+
+print (df)
+
+-----
+
+# define NetworkX graph
+G = nx.DiGraph()
+
+# Add node features
+# mode_nodes = set()  #transport mode  
+# transfer_nodes = set()  #transport mode 
+
+#loop through rows and set edges
+for _, row in df.iterrows():
+    G.add_node(
+        row["station_id_from"],
+        station_name = row["station_name_from"],
+        mode_id=row["mode_id"],
+        transfer=int(row["is_transfer"]),
+        line_id=row["line_id"]
+    )
+    G.add_node(
+        row["station_id_to"],
+        station_name = row["station_name_to"],
+        mode_id=row["mode_id"],
+        transfer=int(row["is_transfer"]),
+        line_id=row["line_id"]
+    )
+    
+    G.add_edge(
+        row["station_id_from"],
+        row["station_id_to"],
+        line_id=row["line_id"],
+        length=float(row["distance_km"]),
+        minutes=float(row["travel_time_min"]),
+        transfer=int(row["is_transfer"]),
+        transfer_time=float(row["transfer_penalty_min"])
+    )
+
+    if row["bidirectional"]:
+        G.add_edge(
+            row["station_id_to"],
+            row["station_id_from"],
+            line_id=row["line_id"],
+            length=float(row["distance_km"]),
+            minutes=float(row["travel_time_min"]),
+            transfer=int(row["is_transfer"]),
+            transfer_time=float(row["transfer_penalty_min"])
+        )
+        
+# for _, row in df.iterrows():
+    #set nodes    
+    # if row["mode_id"]:
+    #     mode_nodes.add(row["mode_id"])
+    # if row["is_transfer"]:
+    #     transfer_nodes.add(row["station_id_from"])
+    #     transfer_nodes.add(row["station_id_to"])
+
+        
+print(f"Nodes: {list(G.nodes)}")
+print(f"Edges: {list(G.edges)}")
+
+----
+
+import torch
+from torch_geometric.utils.convert import from_networkx
+
+import torch.nn.functional as F
+
+import torch_geometric.transforms as T
+
+
+for node in G.nodes():
+    G.nodes[node]["x"] = G.nodes[node]["mode_id"] 
+    
+# Convert to PyG
+pyg_data = from_networkx(
+    G,
+    group_node_attrs=["x"],
+    group_edge_attrs=["line_id", "length", "minutes", "transfer", "transfer_time"]
+)
+
+print(pyg_data)
+print("Edge index shape:", pyg_data.edge_index.shape)
+print("Edge attr shape:", pyg_data.edge_attr.shape)
+print("num of node features:", pyg_data.num_node_features)
+# print("num of node features:", pyg_data)
+
+----
+
+from torch_geometric.nn import GATv2Conv
+
+class GAT(torch.nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels,edge_features):
+        super().__init__()
+        
+        # First GAT layer with multi-head attention
+        # self.conv1 = GATConv(in_channels, hidden_channels, heads=heads, dropout=0.6)
+        self.conv1 = GATv2Conv(in_channels, hidden_channels, heads=8, edge_dim=edge_features)
+        # Second GAT layer (output layer)
+        # self.conv2 = GATConv(hidden_channels * heads, out_channels, heads=1, concat=False, dropout=0.6)
+        self.conv2 = GATv2Conv(hidden_channels * 8,out_channels,heads=1,concat=False,edge_dim=edge_features)
+        
+    def forward(self, x, edge_index):
+        x = F.dropout(x, p=0.6, training=self.training)
+        x = F.elu(self.conv1(x, edge_index))
+        x = F.dropout(x, p=0.6, training=self.training)
+        x = self.conv2(x, edge_index)
+        return F.log_softmax(x, dim=1)
+
+#Option 1: congestion level
+#Option 2: station importance
+num_classes =  3
+edge_features = pyg_data.edge_attr.shape[1]
+model = GAT(pyg_data.num_node_features, 16,num_classes,edge_features)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+
+------
+
+#verify
+
+org_gat = pyg_data.edge_attr.shape
+print(org_gat)
+
+# output_gat = model.
+# print(output_gat)
+
+----
+def train():
+    model.train()
+    optimizer.zero_grad()
+    # Forward pass
+    out = model(pyg_data.x, pyg_data.edge_index)
+    # Calculate loss on training nodes only
+    loss = F.nll_loss(out[pyg_data.train_mask], pyg_data.y[pyg_data.train_mask])
+    loss.backward()
+    optimizer.step()
+    return loss.item()
+
+
+# # Training loop over epochs
+# for epoch in range(40):
+#     tra
+#      = train()
+#     # Optional: evaluate on validation set here
+-----
+
+def test():
+    model.eval()
+    logits = model(data.x, data.edge_index)
+    accs = []
+    for mask in [data.train_mask, data.val_mask, data.test_mask]:
+        pred = logits[mask].max(1)[1]
+        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        accs.append(acc)
+    return accs

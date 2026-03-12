@@ -1,0 +1,29 @@
+﻿    Name,   Age,    Gender,      Start station,End Station,Start location - GPS,End location GPS ,Approximate boarding time,Feeder Service (Y/N),Bike / Rickshaw,Swipe In station,Swipe in time
+Arti,63,F,RamWadi,Ruby Hall,Phoenix Mall,Ruby Hall Hospital,9:00,Y,Rickshaw,RamWadi,8:57
+Purnima,65,F,Kalyani Nagar,Ruby Hall,Landmark Gardens,Ruby Hall Hospital,10:00,Y,Rickshaw,Kalyani Nagar,9:55
+Nandita,62,F,Bund Garden,Pune Station,Vinspa Apartment,Jehangir Hospital,9:00,N,,Bund Garden,8:57
+Roger,62,M,Bund Garden,Civil Court,La Shanz,Civil Court,10:00,N,,Bund Garden,9:55
+Sampath,63,M,Ruby Hall ,Deccan Gymkhana,Ruby Hall hospital,Chitale Bandhu,9:20,Y,Rickshaw,Ruby Hall ,9:10
+Uma,63,F,Ruby Hall ,Anand Nagar,Padma Vilas,Anmol Heights,9:00,Y,Rickshaw,Ruby Hall ,8:55
+Nalini,55,F,Kalyani Nagar,Ideal Colony,Bishops School,Income Tax colony,9:00,Y,Rickshaw,Kalyani Nagar,8:45
+Vinesh,60,M,Ruby Hall ,Vanaz,Atur Park,Tata Capital,9:00,Y,Rickshaw,Ruby Hall ,8:35
+Ashok,40,M,Ruby Hall ,Vanaz,Phoenix Mall,Johnson and Johnson Control,9:00,Y,Rickshaw,Ruby Hall ,8:35
+Sonal,60,F,Civil Court,Deccan Gymkhana,Civil Court,Chitale Bandhu,9:10,N,,Civil Court,9:05
+Eeti,30,F,Kalyani Nagar,Pune Station,Trump Towers,St. Francis Church,9:00,Y,Rickshaw,Kalyani Nagar,8:45
+Aritra,25,M,Ruby Hall,Vanaz,Civil Court,Tata Capital,9:00,Y,Rickshaw,Ruby Hall,8:35
+Pradeep,29,M,Ruby Hall,Vanaz,Peacock Palace,Tata Chemicals,9:00,Y,Rickshaw,Ruby Hall,8:30
+Shravan,60,M,Civil Court,Vanaz,Sacred Heart,TCS,9:00,Y,Rickshaw,Civil Court,8:55
+Bharti,63,F,RamWadi,Ruby Hall,Phoenix Mall,Ruby Hall Hospital,9:15,Y,Rickshaw,RamWadi,9:10
+Mukta,65,F,Kalyani Nagar,Ruby Hall,Landmark Gardens,Ruby Hall Hospital,9:20,Y,Bike,Kalyani Nagar,9:45
+Aparna,62,F,Bund Garden,Pune Station,Farjeste,Wadia College,10:00,N,,Bund Garden,9:55
+Vijay,62,M,Bund Garden,Civil Court,Madhuban,PMC office,9:00,N,,Bund Garden,8:55
+Sam ,63,M,Ruby Hall ,Deccan Gymkhana,Laxmi Vilas,Deccan Gymkhana,9:20,Y,Rickshaw,Ruby Hall ,9:15
+Chitra,63,F,Ruby Hall ,Anand Nagar,Canopus,Shri Vallabh,9:00,Y,Rickshaw,Ruby Hall ,8:58
+Sumati,55,F,Kalyani Nagar,Ideal Colony,Kumar City,Ideal Colony,9:00,Y,Rickshaw,Kalyani Nagar,8:58
+Sarika,32,F,Civil Court,Vanaz,Riverside Estates,Tata Chemicals,9:00,Y,Rickshaw,Civil Court,8:50
+Sumit,40,M,Civil Court,Vanaz,Phoenix Mall,Johnson and Johnson Control,9:00,Y,Rickshaw,Civil Court,8:58
+Shraddha,60,F,Civil Court,Deccan Gymkhana,Civil Court,Chitale Bandhu,9:00,Y,Rickshaw,Civil Court,8:55
+Renuka,30,F,Kalyani Nagar,Pune Station,Kalpataru Gardens,Wadia College,9:00,Y,Rickshaw,Kalyani Nagar,8:58
+Shaily,32,F,Civil Court,Vanaz,Civil Court,TCS,9:00,Y,Rickshaw,Civil Court,8:55
+Mudasir,25,M,Civil Court,Vanaz,Peacock Palace,TCS,9:00,Y,Rickshaw,Civil Court,8:55
+Surya,29,M,Civil Court,Vanaz,Padma Vilas,Tata Capital,9:00,Y,Rickshaw,Civil Court,8:55

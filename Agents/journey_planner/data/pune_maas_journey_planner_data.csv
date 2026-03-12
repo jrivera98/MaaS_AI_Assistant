@@ -1,0 +1,77 @@
+station_id_from,station_name_from,station_id_to,station_name_to,line,mode,distance_km,travel_time_min,is_transfer,transfer_penalty_min,bidirectional
+P01,Bhakti Shakti,P02,Nigdi,purple,metro,1.28,4,FALSE,0,TRUE
+P02,Nigdi,P03,Akurdi,purple,metro,1.28,4,FALSE,0,TRUE
+P03,Akurdi,P04,Chinchwad,purple,metro,1.28,4,FALSE,0,TRUE
+P04,Chinchwad,P05,PCMC Bhavan,purple,metro,1.28,4,FALSE,0,TRUE
+P05,PCMC Bhavan,P06,Sant Tukaram Nagar,purple,metro,1.28,4,FALSE,0,TRUE
+P06,Sant Tukaram Nagar,P07,Nashik Phata,purple,metro,1.28,4,FALSE,0,TRUE
+P07,Nashik Phata,P08,Kasarwadi,purple,metro,1.28,4,FALSE,0,TRUE
+P08,Kasarwadi,P09,Phugewadi,purple,metro,1.28,4,FALSE,0,TRUE
+P09,Phugewadi,P10,Dapodi,purple,metro,1.28,4,FALSE,0,TRUE
+P10,Dapodi,P11,Bopodi,purple,metro,1.28,4,FALSE,0,TRUE
+P11,Bopodi,P12,Khadki,purple,metro,1.28,4,FALSE,0,TRUE
+P12,Khadki,P13,Range Hills,purple,metro,1.28,4,FALSE,0,TRUE
+P13,Range Hills,P14,Shivaji Nagar,purple,metro,1.28,4,FALSE,0,TRUE
+P14,Shivaji Nagar,P15,District Court (Civil Court),purple,metro,1.28,4,FALSE,0,TRUE
+P15,District Court (Civil Court),P16,Kasba Peth,purple,metro,1.28,4,FALSE,0,TRUE
+P16,Kasba Peth,P17,Mandai,purple,metro,1.28,4,FALSE,0,TRUE
+P17,Mandai,P18,Swargate,purple,metro,1.28,4,FALSE,0,TRUE
+P18,Swargate,P19,Market Yard,purple,metro,1.28,4,FALSE,0,TRUE
+P19,Market Yard,P20,Bibwewadi,purple,metro,1.28,4,FALSE,0,TRUE
+P20,Bibwewadi,P21,Padmavati,purple,metro,1.28,4,FALSE,0,TRUE
+P21,Padmavati,P22,Balaji Nagar,purple,metro,1.28,4,FALSE,0,TRUE
+P22,Balaji Nagar,P23,Katraj,purple,metro,1.28,4,FALSE,0,TRUE
+A01,Chandni Chowk,A02,Kothrud Bus Depot,aqua,metro,0.97,3,FALSE,0,TRUE
+A02,Kothrud Bus Depot,A03,Vanaz,aqua,metro,0.97,3,FALSE,0,TRUE
+A03,Vanaz,A04,Anand Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A04,Anand Nagar,A05,Ideal Colony,aqua,metro,0.97,3,FALSE,0,TRUE
+A05,Ideal Colony,A06,Nal Stop,aqua,metro,0.97,3,FALSE,0,TRUE
+A06,Nal Stop,A07,Garware College,aqua,metro,0.97,3,FALSE,0,TRUE
+A07,Garware College,A08,Deccan Gymkhana,aqua,metro,0.97,3,FALSE,0,TRUE
+A08,Deccan Gymkhana,A09,Chhatrapati Sambhaji Udyan,aqua,metro,0.97,3,FALSE,0,TRUE
+A09,Chhatrapati Sambhaji Udyan,A10,PMC Bhavan,aqua,metro,0.97,3,FALSE,0,TRUE
+A10,PMC Bhavan,A11,District Court (Civil Court),aqua,metro,0.97,3,FALSE,0,TRUE
+A11,District Court (Civil Court),A12,Mangalwar Peth,aqua,metro,0.97,3,FALSE,0,TRUE
+A12,Mangalwar Peth,A13,Pune Railway Station,aqua,metro,0.97,3,FALSE,0,TRUE
+A13,Pune Railway Station,A14,Ruby Hall Clinic,aqua,metro,0.97,3,FALSE,0,TRUE
+A14,Ruby Hall Clinic,A15,Bund Garden,aqua,metro,0.97,3,FALSE,0,TRUE
+A15,Bund Garden,A16,Yerwada,aqua,metro,0.97,3,FALSE,0,TRUE
+A16,Yerwada,A17,Kalyani Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A17,Kalyani Nagar,A18,Ramwadi,aqua,metro,0.97,3,FALSE,0,TRUE
+A18,Ramwadi,A19,Viman Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A19,Viman Nagar,A20,Somnath Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A20,Somnath Nagar,A21,Kharadi Bypass,aqua,metro,0.97,3,FALSE,0,TRUE
+A21,Kharadi Bypass,A22,Tulaja Bhavani Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A22,Tulaja Bhavani Nagar,A23,Ubale Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A23,Ubale Nagar,A24,Upper Kharadi Road,aqua,metro,0.97,3,FALSE,0,TRUE
+A24,Upper Kharadi Road,A25,Wagheshwar Temple,aqua,metro,0.97,3,FALSE,0,TRUE
+A25,Wagheshwar Temple,A26,Wagholi,aqua,metro,0.97,3,FALSE,0,TRUE
+A26,Wagholi,A27,Siddharth Nagar,aqua,metro,0.97,3,FALSE,0,TRUE
+A27,Siddharth Nagar,A28,Bakori Phata,aqua,metro,0.97,3,FALSE,0,TRUE
+A28,Bakori Phata,A29,Vithalwadi,aqua,metro,0.97,3,FALSE,0,TRUE
+K01,Megapolis Circle,K02,Quadron,pink,metro,1.1,3,FALSE,0,TRUE
+K02,Quadron,K03,Infosys Phase II,pink,metro,1.1,3,FALSE,0,TRUE
+K03,Infosys Phase II,K04,Dohler,pink,metro,1.1,3,FALSE,0,TRUE
+K04,Dohler,K05,Wipro Technologies,pink,metro,1.1,3,FALSE,0,TRUE
+K05,Wipro Technologies,K06,Pall India,pink,metro,1.1,3,FALSE,0,TRUE
+K06,Pall India,K07,Shivaji Chowk,pink,metro,1.1,3,FALSE,0,TRUE
+K07,Shivaji Chowk,K08,Hinjawadi,pink,metro,1.1,3,FALSE,0,TRUE
+K08,Hinjawadi,K09,Wakad Chowk,pink,metro,1.1,3,FALSE,0,TRUE
+K09,Wakad Chowk,K10,Balewadi Stadium,pink,metro,1.1,3,FALSE,0,TRUE
+K10,Balewadi Stadium,K11,NICMAR,pink,metro,1.1,3,FALSE,0,TRUE
+K11,NICMAR,K12,Ramnagar,pink,metro,1.1,3,FALSE,0,TRUE
+K12,Ramnagar,K13,Laxmi Nagar,pink,metro,1.1,3,FALSE,0,TRUE
+K13,Laxmi Nagar,K14,Balewadi Phata,pink,metro,1.1,3,FALSE,0,TRUE
+K14,Balewadi Phata,K15,Baner Gaon,pink,metro,1.1,3,FALSE,0,TRUE
+K15,Baner Gaon,K16,Baner,pink,metro,1.1,3,FALSE,0,TRUE
+K16,Baner,K17,Indian Agricultural Research Institute,pink,metro,1.1,3,FALSE,0,TRUE
+K17,Indian Agricultural Research Institute,K18,Sakal Nagar,pink,metro,1.1,3,FALSE,0,TRUE
+K18,Sakal Nagar,K19,Savitribai Phule Pune University,pink,metro,1.1,3,FALSE,0,TRUE
+K19,Savitribai Phule Pune University,K20,Reserve Bank of India,pink,metro,1.1,3,FALSE,0,TRUE
+K20,Reserve Bank of India,K21,Agriculture College,pink,metro,1.1,3,FALSE,0,TRUE
+K21,Agriculture College,K22,Shivaji Nagar,pink,metro,1.1,3,FALSE,0,TRUE
+K22,Shivaji Nagar,K23,District Court (Civil Court),pink,metro,1.1,3,FALSE,0,TRUE
+P14,Shivaji Nagar,K22,Shivaji Nagar,transfer,metro,0,5,TRUE,5,TRUE
+P15,District Court (Civil Court),A11,District Court (Civil Court),transfer,metro,0,4,TRUE,4,TRUE
+P15,District Court (Civil Court),K23,District Court (Civil Court),transfer,metro,0,4,TRUE,4,TRUE
+A11,District Court (Civil Court),K23,District Court (Civil Court),transfer,metro,0,4,TRUE,4,TRUE
