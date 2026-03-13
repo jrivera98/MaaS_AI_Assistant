@@ -1,0 +1,418 @@
+import torch
+
+torch.save({
+    "model_state_dict": multi_gat_model.state_dict(),
+    "node_feature_names": pyg_data.node_feature_names,
+    "edge_feature_names": pyg_data.edge_feature_names,
+    "station_ids": pyg_data.station_ids,
+}, "multitask_gat_v1.pt")
+
+
+-------------
+
+import torch
+
+def load_trained_model(model_class, checkpoint_path, model_kwargs, device="cpu"):
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+
+    model = model_class(**model_kwargs)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+    model.eval()
+
+    metadata = {
+        "node_feature_names": checkpoint["node_feature_names"],
+        "edge_feature_names": checkpoint["edge_feature_names"],
+        "station_ids": checkpoint["station_ids"],
+    }
+
+    return model, metadata
+
+-------------------
+
+import torch
+import pandas as pd
+from torch_geometric.data import Data
+
+def build_pyg_graph(metro_edges_df, station_features_df, make_undirected=True):
+    station_features_df = station_features_df.drop_duplicates(subset="station_id").reset_index(drop=True)
+
+    station_ids = station_features_df["station_id"].tolist()
+    station_to_idx = {sid: i for i, sid in enumerate(station_ids)}
+
+    node_feature_cols = [
+        col for col in station_features_df.columns
+        if col != "station_id" and pd.api.types.is_numeric_dtype(station_features_df[col])
+    ]
+
+    x = torch.tensor(
+        station_features_df[node_feature_cols].values,
+        dtype=torch.float
+    )
+
+    valid_edges = metro_edges_df[
+        metro_edges_df["station_id_from"].isin(station_to_idx) &
+        metro_edges_df["station_id_to"].isin(station_to_idx)
+    ].copy()
+
+    src = valid_edges["station_id_from"].map(station_to_idx).tolist()
+    dst = valid_edges["station_id_to"].map(station_to_idx).tolist()
+
+    edge_pairs = list(zip(src, dst))
+
+    if make_undirected:
+        edge_pairs += [(b, a) for a, b in edge_pairs]
+
+    edge_index = torch.tensor(edge_pairs, dtype=torch.long).t().contiguous()
+
+    edge_feature_cols = [
+        col for col in metro_edges_df.columns
+        if col not in ["station_id_from", "station_id_to"]
+        and pd.api.types.is_numeric_dtype(metro_edges_df[col])
+    ]
+
+    edge_attr = None
+    if edge_feature_cols:
+        edge_values = valid_edges[edge_feature_cols].values
+
+        if make_undirected:
+            edge_values = pd.concat(
+                [pd.DataFrame(edge_values), pd.DataFrame(edge_values)],
+                ignore_index=True
+            ).values
+
+        edge_attr = torch.tensor(edge_values, dtype=torch.float)
+
+    data = Data(x=x, edge_index=edge_index)
+
+    if edge_attr is not None:
+        data.edge_attr = edge_attr
+
+    data.station_ids = station_ids
+    data.station_to_idx = station_to_idx
+    data.node_feature_names = node_feature_cols
+    data.edge_feature_names = edge_feature_cols
+
+    return data
+
+------------------
+
+import torch
+import torch.nn.functional as F
+import pandas as pd
+
+def run_multitask_inference(model, pyg_data):
+    model.eval()
+
+    with torch.no_grad():
+        congestion_logits, feeder_logits = model(
+            pyg_data.x,
+            pyg_data.edge_index,
+            pyg_data.edge_attr
+        )
+
+        congestion_probs = F.softmax(congestion_logits, dim=1)
+        feeder_probs = F.softmax(feeder_logits, dim=1)
+
+        congestion_pred = congestion_probs.argmax(dim=1)
+        feeder_pred = feeder_probs.argmax(dim=1)
+
+    predictions_df = pd.DataFrame({
+        "station_id": pyg_data.station_ids,
+        "pred_congestion_class": congestion_pred.cpu().numpy(),
+        "pred_feeder_class": feeder_pred.cpu().numpy(),
+        "pred_congestion_confidence": congestion_probs.max(dim=1).values.cpu().numpy(),
+        "pred_feeder_confidence": feeder_probs.max(dim=1).values.cpu().numpy(),
+    })
+
+    return predictions_df, congestion_probs, feeder_probs
+
+-----------------
+CONGESTION_LABELS = {
+    0: "low",
+    1: "medium",
+    2: "high"
+}
+
+FEEDER_LABELS = {
+    0: "low",
+    1: "medium",
+    2: "high",
+    3: "very_high"
+}
+
+def add_readable_labels(predictions_df):
+    predictions_df = predictions_df.copy()
+    predictions_df["congestion_label"] = predictions_df["pred_congestion_class"].map(CONGESTION_LABELS)
+    predictions_df["feeder_label"] = predictions_df["pred_feeder_class"].map(FEEDER_LABELS)
+    return predictions_df
+
+----------
+
+from collections import defaultdict
+
+def build_adjacency_list(metro_edges_df):
+    adjacency = defaultdict(list)
+
+    for _, row in metro_edges_df.iterrows():
+        a = row["station_id_from"]
+        b = row["station_id_to"]
+
+        adjacency[a].append(b)
+        adjacency[b].append(a)
+
+    return adjacency
+
+7-------------
+from collections import deque
+
+def generate_candidate_routes(adjacency, origin_station, destination_station, max_routes=5, max_hops=12):
+    routes = []
+    queue = deque([[origin_station]])
+
+    while queue and len(routes) < max_routes:
+        path = queue.popleft()
+        current = path[-1]
+
+        if current == destination_station:
+            routes.append(path)
+            continue
+
+        if len(path) > max_hops:
+            continue
+
+        for neighbor in adjacency[current]:
+            if neighbor not in path:
+                new_path = path + [neighbor]
+                queue.append(new_path)
+
+    return routes
+
+8--------------
+
+def congestion_penalty(congestion_class):
+    mapping = {
+        0: 0.0,   # low
+        1: 3.0,   # medium
+        2: 8.0    # high
+    }
+    return mapping.get(congestion_class, 0.0)
+
+def feeder_bonus(feeder_class):
+    mapping = {
+        0: 0.0,
+        1: 1.0,
+        2: 2.0,
+        3: 3.0
+    }
+    return mapping.get(feeder_class, 0.0)
+
+def score_routes(candidate_routes, predictions_df):
+    pred_map = predictions_df.set_index("station_id").to_dict("index")
+
+    scored_routes = []
+
+    for route in candidate_routes:
+        total_congestion_penalty = 0.0
+        total_feeder_bonus = 0.0
+
+        station_details = []
+
+        for station_id in route:
+            station_pred = pred_map.get(station_id, None)
+
+            if station_pred is None:
+                continue
+
+            c_class = station_pred["pred_congestion_class"]
+            f_class = station_pred["pred_feeder_class"]
+
+            total_congestion_penalty += congestion_penalty(c_class)
+            total_feeder_bonus += feeder_bonus(f_class)
+
+            station_details.append({
+                "station_id": station_id,
+                "congestion_label": station_pred["congestion_label"],
+                "feeder_label": station_pred["feeder_label"],
+                "congestion_confidence": station_pred["pred_congestion_confidence"],
+                "feeder_confidence": station_pred["pred_feeder_confidence"],
+            })
+
+        route_length_penalty = len(route) - 1
+
+        final_score = route_length_penalty + total_congestion_penalty - total_feeder_bonus
+
+        scored_routes.append({
+            "route": route,
+            "num_stops": len(route),
+            "route_length_penalty": route_length_penalty,
+            "total_congestion_penalty": total_congestion_penalty,
+            "total_feeder_bonus": total_feeder_bonus,
+            "final_score": final_score,
+            "station_details": station_details
+        })
+
+    scored_routes.sort(key=lambda r: r["final_score"])
+    return scored_routes
+
+9-------------------
+def recommend_routes_v1(
+    origin_station,
+    destination_station,
+    metro_edges_df,
+    station_features_df,
+    model
+):
+    # 1. Build graph
+    pyg_data = build_pyg_graph(metro_edges_df, station_features_df)
+
+    # 2. Run GAT predictions
+    predictions_df, _, _ = run_multitask_inference(model, pyg_data)
+    predictions_df = add_readable_labels(predictions_df)
+
+    # 3. Build adjacency
+    adjacency = build_adjacency_list(metro_edges_df)
+
+    # 4. Generate candidate routes
+    candidate_routes = generate_candidate_routes(
+        adjacency,
+        origin_station,
+        destination_station,
+        max_routes=5,
+        max_hops=12
+    )
+
+    if not candidate_routes:
+        return {
+            "origin_station": origin_station,
+            "destination_station": destination_station,
+            "routes": [],
+            "message": "No candidate routes found."
+        }
+
+    # 5. Score routes
+    scored_routes = score_routes(candidate_routes, predictions_df)
+
+    return {
+        "origin_station": origin_station,
+        "destination_station": destination_station,
+        "routes": scored_routes
+    }
+
+10------------------
+
+result = recommend_routes_v1(
+    origin_station=101,
+    destination_station=130,
+    metro_edges_df=metro_edges_df,
+    station_features_df=station_features_df,
+    model=multi_gat_model
+)
+
+11-----------------------
+def format_route_suggestions(result):
+    if not result["routes"]:
+        return result["message"]
+
+    lines = []
+    lines.append(f"Origin: {result['origin_station']}")
+    lines.append(f"Destination: {result['destination_station']}")
+    lines.append("")
+
+    for i, route_info in enumerate(result["routes"][:3], start=1):
+        route_name = f"Route {chr(64 + i)}"
+
+        avg_congestion = route_info["total_congestion_penalty"] / max(route_info["num_stops"], 1)
+        avg_feeder = route_info["total_feeder_bonus"] / max(route_info["num_stops"], 1)
+
+        lines.append(f"{route_name}")
+        lines.append(f"  Stations: {route_info['route']}")
+        lines.append(f"  Stops: {route_info['num_stops']}")
+        lines.append(f"  Route score: {route_info['final_score']:.2f}")
+        lines.append(f"  Avg congestion score: {avg_congestion:.2f}")
+        lines.append(f"  Avg feeder score: {avg_feeder:.2f}")
+
+        if route_info["station_details"]:
+            end_station = route_info["station_details"][-1]
+            lines.append(
+                f"  Destination station congestion: {end_station['congestion_label']}"
+            )
+            lines.append(
+                f"  Destination station feeder availability: {end_station['feeder_label']}"
+            )
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+12----------------------------
+def score_routes(candidate_routes, predictions_df, prefer_low_congestion=True):
+    pred_map = predictions_df.set_index("station_id").to_dict("index")
+    scored_routes = []
+
+    for route in candidate_routes:
+        total_congestion_penalty = 0.0
+        total_feeder_bonus = 0.0
+        station_details = []
+
+        for station_id in route:
+            station_pred = pred_map.get(station_id)
+            if station_pred is None:
+                continue
+
+            c_class = station_pred["pred_congestion_class"]
+            f_class = station_pred["pred_feeder_class"]
+
+            total_congestion_penalty += congestion_penalty(c_class)
+            total_feeder_bonus += feeder_bonus(f_class)
+
+            station_details.append({
+                "station_id": station_id,
+                "congestion_label": station_pred["congestion_label"],
+                "feeder_label": station_pred["feeder_label"],
+            })
+
+        route_length_penalty = len(route) - 1
+
+        if prefer_low_congestion:
+            final_score = (0.7 * route_length_penalty) + (1.5 * total_congestion_penalty) - (0.8 * total_feeder_bonus)
+        else:
+            final_score = (1.5 * route_length_penalty) + (1.0 * total_congestion_penalty) - (0.8 * total_feeder_bonus)
+
+        scored_routes.append({
+            "route": route,
+            "num_stops": len(route),
+            "final_score": final_score,
+            "station_details": station_details,
+            "total_congestion_penalty": total_congestion_penalty,
+            "total_feeder_bonus": total_feeder_bonus
+        })
+
+    scored_routes.sort(key=lambda r: r["final_score"])
+    return scored_routes
+
+14---------------
+result = recommend_routes_v1(
+    origin_station=101,
+    destination_station=130,
+    metro_edges_df=metro_edges_df,
+    station_features_df=station_features_df,
+    model=multi_gat_model
+)
+
+print(format_route_suggestions(result))
+
+--------------------------
+
+project/
+├── models/
+│   └── multitask_gat.py
+├── pipeline/
+│   ├── graph_builder.py
+│   ├── inference.py
+│   ├── routing.py
+│   └── formatter.py
+├── checkpoints/
+│   └── multitask_gat_v1.pt
+└── main.py
+
