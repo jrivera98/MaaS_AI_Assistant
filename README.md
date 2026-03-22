@@ -24,6 +24,7 @@ Setup Step:
     ollama run *foundation_model*
     ollama run qwen2.5:14b (16GB)
     ollama run qwen2.5:7b (8GB) *recommended*
+    ollama run mistral:7b *fast rep model*
 
     
     python *agent_name*.py
