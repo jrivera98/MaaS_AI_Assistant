@@ -12,7 +12,7 @@ from pandasql import sqldf
 pro_dir = "C:\\Users\\sasab\\Documents\\Projects\\MaaS_AI\\Main_App\\"
 data_path = "models\\GAT\\data\\"
 
-#graph_builder
+#graph_builder ------------------------------------------------
 def build_pyg_graph(metro_edges_df, station_features_df, make_undirected=True):
     station_features_df = station_features_df.drop_duplicates(subset="station_id").reset_index(drop=True)
 
@@ -74,37 +74,58 @@ def build_pyg_graph(metro_edges_df, station_features_df, make_undirected=True):
 
     return data
 
-# inference 
+# inference ------------------------------------------------
 def clean_station_name(s):
     if pd.isna(s):
         return s
     return str(s).strip()
 
-#load station master list
 
-#load in csv and cleans col data
+    #load in csv and cleans col data
+
 def load_data(csv_path, col_to_clean):
     data_path = csv_path
-        
-    #loading in csv file
-    df = pd.read_csv(data_path) 
-
-    #clean columns data
-    df.columns = df.columns.str.strip()
     
-    for col in col_to_clean:
-         # Clean edge df station names
-        df[col] = df[col].apply(clean_station_name)
+    try:
+        #loading in csv file
+        df = pd.read_csv(data_path) 
+
+        #clean columns data
+        df.columns = df.columns.str.strip()
+        
+        if col_to_clean != None:
+            for col in col_to_clean:
+                # Clean edge df station names
+                df[col] = df[col].apply(clean_station_name)
+        
+        print(f"Read CSV successfully")
+        
+    except Exception as e:
+        print(f"Error reading CSV: {e}")
     
     return df
 
+#load in csv and cleans col data
+def write_data(csv_path, df):    
+    
+    try:    
+        #write to csv file
+        df.to_csv(csv_path, index=False)
+        print(f"Saved CSV successfully to {csv_path}")
+        
+    except Exception as e:
+        print(f"Error saving CSV: {e}")
+        
+    return df
+
+
+#load station master list
 def load_station_master():
     col = ["station_name"]
     master_csv_path = pro_dir+"data_bases\\master_stations_list.csv"
     master_df = load_data(master_csv_path, col)
     
     return master_df
-
 
 def  load_pyg_data():
     metro_edges_path = pro_dir+data_path+"pune_maas_journey_planner_data.csv"
@@ -216,7 +237,7 @@ def add_readable_labels(dataframe):
     label_df["feeder_label"] = dataframe["pred_feeder_class"].map(feeder_bonus)
     return label_df
 
-#routing 
+#routing ------------------------------------------------
 def build_adjacency_list(metro_edges_df):
     adjacency_station = defaultdict(list)
 
@@ -307,11 +328,11 @@ def score_routes(possible_routes, predictions_df):
         final_score = route_length_penalty + total_congestion_penalty - total_feeder_bonus
 
         station_names_route = get_Station_names(route)
-        print("-------------station_names_route---------------")
+        print("t-------------station_names_route---------------")
         print(station_names_route)
         
         scored_routes.append({
-            "route": route,
+            "route": station_names_route,
             "num_stops": len(route),
             "route_length_penalty": route_length_penalty,
             "total_congestion_penalty": total_congestion_penalty,
@@ -358,7 +379,7 @@ def recommend_routes(origin_station,destination_station,metro_edges_df,station_f
         "routes": rated_routes
     }
 
-#formatter
+#formatter ------------------------------------------------
 def format_route_suggestions(result):
     if not result["routes"]:
         return result["message"]
@@ -394,11 +415,12 @@ def format_route_suggestions(result):
 
     return "\n".join(lines)
 
-# data normalization
+# data normalization ------------------------------------------------
 def normalize_trip_info(parsed_responce):
-    json_res = json.loads(parsed_responce)
     
-    normalized = {
+    try:
+        json_res = json.loads(parsed_responce)
+        normalized = {
         "start_station": json_res.get("start_station"),
         "end_station": json_res.get("end_station"),
         "feeder_required": json_res.get("feeder_required"),
@@ -407,18 +429,23 @@ def normalize_trip_info(parsed_responce):
         "arrival_time": json_res.get("arrival_time"),
         # "start_location": json_res.get("start_location"),
         # "final_destination": json_res.get("final_destination")
-    }
+        }
 
-    if normalized["feeder_type"] is not None:
-        normalized["feeder_type"] = str(normalized["feeder_type"]).lower().strip()
+        if normalized["feeder_type"] is not None:
+            normalized["feeder_type"] = str(normalized["feeder_type"]).lower().strip()
 
-    if normalized["feeder_type"] not in {None, "bike", "rickshaw"}:
-        normalized["feeder_type"] = None
+        if normalized["feeder_type"] not in {None, "bike", "rickshaw"}:
+            normalized["feeder_type"] = None
 
-    if normalized["feeder_required"] not in {True, False, None}:
-        normalized["feeder_required"] = None
+        if normalized["feeder_required"] not in {True, False, None}:
+            normalized["feeder_required"] = None
 
-    return normalized
+        return normalized
+    
+    except Exception as e:
+        print("JSON parsing failed:", e)
+        print("Received:", repr(parsed_responce))
+        return None  # or raise, or return empty dict
 
 def get_missing_fields(context, req_fields):
     missing = []

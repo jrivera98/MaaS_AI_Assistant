@@ -18,7 +18,7 @@ Setup Step:
 
 2. Configure .env
 
-3. Start Services
+3. Start Services on port 11434
     ollama serve
 
     ollama run *foundation_model*
@@ -28,6 +28,9 @@ Setup Step:
 
     
     python *agent_name*.py
+
+    #check port
+    netstat -aon | findstr 11434
 
     #to kill task at port 
     taskkill /PID {PID} /F

@@ -49,7 +49,7 @@ def main():
     """
     print(request_mess)
     
-    user_input = "Need to get from Bhakti Shakti to Ruby Hall Clinic"#input("You: ")
+    user_input = "Need to get from Bhakti Shakti to Ruby Hall Clinic and i need a bike"#input("You: ")
     
     # loop until user exist convo
     while True:  
@@ -142,7 +142,14 @@ def main():
         TRIP_SCHEMA["arrival_time"] = normalize_res["arrival_time"]      
         
         print(TRIP_SCHEMA)
-                
+        
+        #update swipe db with user and trip details 
+        #update_swipe_db()
+        #then load model with updated info
+        #get best route
+        #then use that and time. if arrival time then determine what depart time the user will need to leave.
+        #if depart time then determine when arrive time
+            #if feeder is required call service to be there by arrive time               
         model_kwargs ={
             "in_channels":pyg_gat_data.num_node_features,
             "hidden_channels":16, 
@@ -160,8 +167,8 @@ def main():
         )
 
         # print(result["routes"])
-        # formatted_routes = format_route_suggestions(result)
-        # print(formatted_routes)
+        formatted_routes = format_route_suggestions(result)
+        print(formatted_routes)
         
         # # # bot = LocalChatbot(model="qwen2.5:7b")
         # # # #  while True:
