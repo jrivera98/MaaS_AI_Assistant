@@ -2,7 +2,7 @@ import requests
 import json
 from datetime import datetime
 
-Extraction_SYS_MSG = """
+EXTRACTION_SYS_MSG ="""
             You extract trip-planning information from user messages for a Mobility-as-a-Service assistant.
 
             Return ONLY valid JSON with these keys:
@@ -23,7 +23,7 @@ Extraction_SYS_MSG = """
             - If the user says they do not need feeder service, set feeder_required to false and feeder_type to null.
             - If the user says they need feeder service but gives no type, set feeder_required to true and feeder_type to null.
             - Return JSON only. No markdown, no explanation.
-        """
+"""
         
 FROMATTING_SYS_MSG ="""
                     You are an intelligent assistant for a Mobility-as-a-Service system.

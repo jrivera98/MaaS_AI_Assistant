@@ -3,14 +3,13 @@ import pandas as pd
 import json
 from torch_geometric.data import Data
 import torch.nn.functional as F
-from collections import deque,defaultdict
 import networkx as nx
-from models.GAT.gat_journey_planner import create_pyg_graph
 from pandasql import sqldf
+from collections import deque,defaultdict
+import re
 
-#global var
-pro_dir = "C:\\Users\\sasab\\Documents\\Projects\\MaaS_AI\\Main_App\\"
-data_path = "models\\GAT\\data\\"
+from models.GAT.gat_journey_planner import create_pyg_graph
+from dependencies.utils import PRO_DIR,DATA_PATH,REQUIRED_FIELDS
 
 #graph_builder ------------------------------------------------
 def build_pyg_graph(metro_edges_df, station_features_df, make_undirected=True):
@@ -81,8 +80,7 @@ def clean_station_name(s):
     return str(s).strip()
 
 
-    #load in csv and cleans col data
-
+#load in csv and cleans col data
 def load_data(csv_path, col_to_clean):
     data_path = csv_path
     
@@ -118,18 +116,17 @@ def write_data(csv_path, df):
         
     return df
 
-
 #load station master list
 def load_station_master():
     col = ["station_name"]
-    master_csv_path = pro_dir+"data_bases\\master_stations_list.csv"
+    master_csv_path = PRO_DIR+"data_bases\\master_stations_list.csv"
     master_df = load_data(master_csv_path, col)
     
     return master_df
 
-def  load_pyg_data():
-    metro_edges_path = pro_dir+data_path+"pune_maas_journey_planner_data.csv"
-    station_features_path = pro_dir+data_path+"station_features.csv"
+def load_pyg_data():
+    metro_edges_path = PRO_DIR+DATA_PATH+"pune_maas_journey_planner_data.csv"
+    station_features_path = PRO_DIR+DATA_PATH+"station_features.csv"
     
     
     #loading in csv file
@@ -237,6 +234,37 @@ def add_readable_labels(dataframe):
     label_df["feeder_label"] = dataframe["pred_feeder_class"].map(feeder_bonus)
     return label_df
 
+def add_swipe_info(user_info,trip_info):   
+         
+    swipe_info = {
+        "Name" : user_info["name"],
+        "Age" : user_info["age"],
+        "Gender" : user_info["gender"],
+        "Start station" : trip_info["start_station"],
+        "End Station" : trip_info["end_station"],
+        "Start location - GPS" : None, #trip_info["gps_start_loc"],
+        "End location GPS" : None, #trip_info["gps_final_loc"],
+        "Approximate boarding time" : None,
+        "Feeder Service (Y/N)" : "Y" if trip_info["feeder_required"] else "N",
+        "Bike / Rickshaw" : trip_info["feeder_type"], #None if trip_info["feeder_type"]==None else trip_info["feeder_type"], #trip_info["feeder_type"].fillna(trip_info["feeder_type"]) ,
+        "Swipe In station" : trip_info["start_station"],
+        "Swipe in time":None
+        } 
+    print("-------------swipe info----------------")
+    print(swipe_info)
+    
+    # update_swipe_db()
+    #load swipe df to update file
+    col = ["Name", "Age","Gender","Start station","End Station","Start location - GPS","End location GPS","Approximate boarding time","Feeder Service (Y/N)","Bike / Rickshaw","Swipe In station","Swipe in time"]
+    swipe_csv_path = PRO_DIR+"data_bases\\swipe_metadata.csv"
+    swipe_df = load_data(swipe_csv_path,col)
+    
+    swipe_df.loc[len(swipe_df)] = swipe_info
+    # print("-------------swipe_df----------------")
+    # print(swipe_df)
+    #write it to the csv
+    #write_data(swipe_csv_path,swipe_df)
+
 #routing ------------------------------------------------
 def build_adjacency_list(metro_edges_df):
     adjacency_station = defaultdict(list)
@@ -294,7 +322,7 @@ def feeder_bonus(feeder_class):
 
 def score_routes(possible_routes, predictions_df):
     pred_map = predictions_df.set_index("station_id").to_dict("index")
-
+    station_master_df = load_station_master()
     scored_routes = []
 
     for route in possible_routes:
@@ -304,6 +332,8 @@ def score_routes(possible_routes, predictions_df):
         station_details = []
 
         for station_id in route:
+            is_transfer = False
+            
             station_pred = pred_map.get(station_id, None)
 
             if station_pred is None:
@@ -314,9 +344,16 @@ def score_routes(possible_routes, predictions_df):
 
             total_congestion_penalty += congestion_penalty(c_class)
             total_feeder_bonus += feeder_bonus(f_class)
-
+            
+            station_name = station_master_df.loc[station_master_df["master_station_id"] == station_id, "station_name"].iloc[0]
+            
+            if list(station_id)[0] == 'T':
+                is_transfer = True
+                
             station_details.append({
                 "station_id": station_id,
+                "station_name": station_name,
+                "is_transfer": is_transfer,
                 "congestion_label": station_pred["congestion_label"],
                 "feeder_label": station_pred["feeder_label"],
                 "congestion_confidence": station_pred["pred_congestion_confidence"],
@@ -379,8 +416,9 @@ def recommend_routes(origin_station,destination_station,metro_edges_df,station_f
         "routes": rated_routes
     }
 
+  
 #formatter ------------------------------------------------
-def format_route_suggestions(result):
+def format_route_suggestions(result,trip_info):
     if not result["routes"]:
         return result["message"]
 
@@ -391,13 +429,30 @@ def format_route_suggestions(result):
 
     for i, route_info in enumerate(result["routes"][:3], start=1):
         route_name = f"Route {chr(64 + i)}"
-
+        is_transfer = False
         avg_congestion = route_info["total_congestion_penalty"] / max(route_info["num_stops"], 1)
         avg_feeder = route_info["total_feeder_bonus"] / max(route_info["num_stops"], 1)
-
+        
         lines.append(f"{route_name}")
         lines.append(f"  Stations: {route_info['route']}")
         lines.append(f"  Stops: {route_info['num_stops']}")
+        
+        if trip_info["departure_time"] != None:
+            #loop and check if route is transfer
+            for station_detail in route_info["station_details"]:
+                if station_detail["is_transfer"] == True:
+                    is_transfer = True
+                    
+            train_opt =  get_boarding_time(trip_info["departure_time"],"purple", trip_info["start_station"])
+            # train_opt,train_opt_b =  get_boarding_time(trip_info["departure_time"],"purple", trip_info["start_station"])
+            train_a_arr = get_arrival_time(train_opt,"purple",trip_info["end_station"],is_transfer)
+            #train_b_arr = get_arrival_time(train_opt_b,"aqua","Ideal Colony",is_transfer)
+        
+            #time
+            lines.append(f"  Board train at: {train_opt['train_time']}")
+            lines.append(f"  Arrive at: {train_a_arr['train_time']}")
+            
+        #scoring
         lines.append(f"  Route score: {route_info['final_score']:.2f}")
         lines.append(f"  Avg congestion score: {avg_congestion:.2f}")
         lines.append(f"  Avg feeder score: {avg_feeder:.2f}")
@@ -415,6 +470,7 @@ def format_route_suggestions(result):
 
     return "\n".join(lines)
 
+    
 # data normalization ------------------------------------------------
 def normalize_trip_info(parsed_responce):
     
@@ -496,9 +552,7 @@ def get_Station_names(route):
         # print(station_id)
         
         try: 
-            station_name.append(station_master_df.loc[
-                station_master_df["master_station_id"] == station_id, "station_name"
-                ].iloc[0])
+            station_name.append(station_master_df.loc[station_master_df["master_station_id"] == station_id, "station_name"].iloc[0])
             
         except IndexError:
             # No match found
@@ -510,3 +564,122 @@ def get_Station_names(route):
             
     # print(station_name)
     return station_name
+
+#Time ------------------------------------------------
+def get_time_table(station_line,station_name):
+    db_path = "C:\\Users\\sasab\\Documents\\Projects\\MaaS_AI\\Main_App\\data_bases\\"
+    tt_path = ""
+    match station_line:
+        case "purple":
+            tt_path = db_path+"purple_line_timetable.csv"
+            
+        case "pink":
+            tt_path = db_path+"pink_line_timetable.csv"
+            
+        case "aqua":
+            tt_path = db_path+"aqua_line_timetable.csv"
+            
+    time_table_df = load_data(tt_path,None)
+    
+    return time_table_df
+    
+#get Approximate boarding time
+def get_boarding_time(depart_time,station_line,station_name):
+    found_in_list = False
+    time  = pd.to_datetime(depart_time, format="%H:%M", errors="coerce")
+    df = get_time_table(station_line,station_name)
+    # print("---station_name----")
+    # print(station_name)
+    train_id = df["Train ID"].tolist()
+    train_times = pd.to_datetime(df[station_name], format="%H:%M", errors="coerce").tolist()
+    
+    try:
+        index = train_times.index(time)
+        print(f"Found at index {index}")
+        found_in_list = True
+    except ValueError:
+        print("Not found")
+        found_in_list = False
+        temp = train_times.copy()
+        # add time to list
+        temp.append(time)
+        temp.sort()
+        temp_index = temp.index(time)
+        #check = temp[temp_index+1]
+        index = train_times.index(temp[temp_index+1])#+1
+
+    # print("-------------time-------------")
+    # print(time)
+    # print("-------------train_times------------t-")
+    # print(train_times)
+    # print("-------------dep index-------------")
+    # print(index)
+    # print("-------------found_in_list-------------")
+    # print(found_in_list)
+        
+    if found_in_list:
+        return {"train_id":train_id[index],"train_time":train_times[index]}#,{"train_id":train_id[index+1],"train_time":train_times[index+1]}
+    else:
+        return {"train_id":train_id[index],"train_time":train_times[index]}#,{"train_id":train_id[index+1],"train_time":train_times[index+1]}
+    
+def get_arrival_time(train_op,station_line,station_name, is_transfer):
+    df = get_time_table(station_line,station_name)
+    train_id = df["Train ID"].tolist()
+    train_times = pd.to_datetime(df[station_name], format="%H:%M", errors="coerce").tolist()
+    
+    try:
+        index = train_id.index(train_op["train_id"])
+        print(f"Found at index {index}")
+        
+        time = train_times[index]
+        
+    except ValueError:
+        print(f"Train id: {train_op["train_id"]} Not found")
+        
+    # print("-------------train_id-------------")
+    # print(train_op["train_id"])
+    # print("-------------train_times-------------")
+    # print(train_times)
+    # print("-------------index-------------")
+    # print(index)
+    # print("-------------time-------------")
+    # print(time)
+    return {"train_id":train_id[index],"train_time":time}
+
+
+# ------------------------------------------------
+def set_trip_schema(bot,user_input):
+    while True: 
+            
+        if user_input.lower() in ["exit", "quit"]:
+            break
+                        
+        bot_response = bot.chat(user_input)
+        # print(f"Bot: {bot_response}\n")
+        # print("RAW RESPONSE:", repr(response))
+        
+        parse_res = re.split(r'([{}])', bot_response)
+        cleaned_res = "{"+parse_res[2]+"}"
+        print(cleaned_res)
+        
+        normalize_res = normalize_trip_info(cleaned_res)
+        missing_data, followup_required = get_missing_fields(normalize_res, REQUIRED_FIELDS)
+                
+        if not followup_required:
+            print("All req info is obtained")
+            break
+        else:
+            followup_questions = build_followup_question(missing_data)
+            print("Bot:")
+            print(followup_questions)
+            user_input = input("You: ")
+            
+            # user_input = "follow up question:"+followup_questions + "and user response:"+ followup_rep
+            # print(user_input)
+        
+        
+        
+        return normalize_res
+        
+        
+        
